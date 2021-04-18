@@ -40,38 +40,32 @@ def preprocess(method):
     y_train = pd.get_dummies(y_train)
     y_test = pd.get_dummies(y_test)
 
-    # Trying different dataset normalizing techniques
-    # 1. Centering
-    if method is "1":
-        print('geia')
-        X_train_means = X_train.mean(axis=1)
-        print(X_train_means)
-
-    # 2. Normalization
+    # Normalization
     # Pixel values between 0 and 255, so we will divide by 255.
-    elif method is "2":
-        norm = MinMaxScaler()
-        X_train = norm.fit_transform(X_train)
-        y_train = norm.fit_transform(y_train)
 
-        # for later use
-        X_test = norm.fit_transform(X_test)
-        y_test = norm.fit_transform(y_test)
+    norm = MinMaxScaler()
+    X_train = norm.fit_transform(X_train)
+    y_train = norm.fit_transform(y_train)
 
-    # 3. Standardization
-    else:
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        y_train = scaler.fit_transform(y_train)
+    # for later use
+    X_test = norm.fit_transform(X_test)
+    y_test = norm.fit_transform(y_test)
 
-        # for later use
-        X_test = scaler.fit_transform(X_test)
-        y_test = scaler.fit_transform(y_test)
+    # Standardization (not used)
+    # scaler = StandardScaler()
+    # X_train = scaler.fit_transform(X_train)
+    # y_train = scaler.fit_transform(y_train)
+    #
+    # # for later use
+    # X_test = scaler.fit_transform(X_test)
+    # y_test = scaler.fit_transform(y_test)
 
-    # Split for kfold validation
+    # Create lists for the different metrics
     mses = list()
     cross_ent = list()
     acc = list()
+
+    # Split for kfold validation
     kf = KFold(n_splits=5, random_state=None, shuffle=False)  # Maybe shuffle. Check later
 
     for k, (train_ind, test_ind) in enumerate(kf.split(X_train, y_train)):
@@ -95,6 +89,8 @@ def preprocess(method):
         # 3. Output
         model.add(Dense(10, activation="softmax"))
         opt = RMSprop(learning_rate=learning_rate)
+
+        # Early stopping for A2 final subquestion.
         # callback = EarlyStopping(monitor="val_loss", mode="min", min_delta=0, patience=20, verbose=1)
         model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy', 'mean_squared_error',
                                                                                'categorical_crossentropy'])
@@ -113,7 +109,7 @@ def preprocess(method):
     print("MSE is : ", np.mean(mses))
     print("Cross-Entropy is : ", np.mean(cross_ent))
 
-    # Plotting!s
+    # Plotting!
     plt.figure(0)
     plt.plot(history.history['accuracy'], label='Accuracy (train)')
     plt.plot(history.history['val_accuracy'], label='Accuracy (test)')
@@ -147,8 +143,5 @@ def preprocess(method):
 
 if __name__ == '__main__':
     # Parsing the command line arguments
-    parser = ArgumentParser(description="Method")
-    parser.add_argument('int', help="int")
-    args = (parser.parse_args())
-    integer = args.int
-    preprocess(integer)
+    parser = ArgumentParser(description="Run the program")
+    preprocess()
