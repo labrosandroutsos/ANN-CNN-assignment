@@ -101,6 +101,7 @@ def preprocess():
         cross_ent.append(cross)
         print(f"Number {k} Fold's MSE score is {mse} and Cross entropy score is {cross}")
 
+    model.summary()
     print("MSE is : ", np.mean(mses))
     print("Cross-Entropy is : ", np.mean(cross_ent))
 
