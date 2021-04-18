@@ -19,7 +19,7 @@ def leakyrelu(x):
     return relu(x, alpha=0.01)
 
 
-def preprocess(method):
+def preprocess():
     train = pd.read_csv('mnist_train.csv')
     test = pd.read_csv('mnist_test.csv')
 
@@ -73,30 +73,37 @@ def preprocess(method):
         y_train_new, y_test_new = y_train[train_ind], y_train[test_ind]
 
         # Creating the Neural network model
+        # Learning rate takes values 0.001, 0.05 and 0.1
         learning_rate = 0.001
+        # Momentum takes values 0.2 and 0.6
+        momentum = 0.2
+
         # Sequential model start
         model = Sequential()
         # Layers :
         # 1. Input layer
         model.add(Input(shape=784, ))
 
-        # 2. First Hidden layer with neurons: 10, 397 or 794
-        model.add(Dense(397, activation=leakyrelu))
+        # 2.1. First Hidden layer with neurons: 10, 397 or 794
+        # weight decay parameter takes values 0.1, 0.5 and 0.9 (For A4 question)
+        reg = 0.1
+        model.add(Dense(397, activation=leakyrelu, kernel_regularizer=l2(reg), bias_regularizer=l2(reg)))
 
-        # 2. Second Hidden layer with neurons: 10, 100, 198, 397, 794
-        model.add(Dense(100, activation=leakyrelu))
+        # 2.2. Second Hidden layer with neurons: 10, 100, 198, 397, 794
+        # model.add(Dense(10, activation=leakyrelu))
 
         # 3. Output
         model.add(Dense(10, activation="softmax"))
-        opt = RMSprop(learning_rate=learning_rate)
+        # Momentum is for A3 question
+        opt = RMSprop(learning_rate=learning_rate, momentum=momentum)
 
         # Early stopping for A2 final subquestion.
-        # callback = EarlyStopping(monitor="val_loss", mode="min", min_delta=0, patience=20, verbose=1)
+        callback = EarlyStopping(monitor="categorical_crossentropy", mode="min", min_delta=0.1, patience=10, verbose=1)
         model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy', 'mean_squared_error',
                                                                                'categorical_crossentropy'])
 
         history = model.fit(X_train_new, y_train_new, epochs=200, batch_size=256,
-                            validation_data=(X_test_new, y_test_new), verbose=1)
+                            validation_data=(X_test_new, y_test_new), callbacks=[callback], verbose=1)
 
         loss, accuracy, mse, cross = model.evaluate(X_test_new, y_test_new, verbose=0)
 
