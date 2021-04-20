@@ -1,19 +1,15 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import keras
-from tensorflow.keras.initializers import glorot_uniform
+from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-from tensorflow.keras.regularizers import l1, l2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from sklearn.metrics import log_loss
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from tensorflow.keras.layers import Input, Dense, Dropout, Conv1D, Dropout, MaxPooling1D, AveragePooling1D, Flatten
 from tensorflow.keras import Sequential
 from tensorflow.keras.activations import relu
 from argparse import ArgumentParser
-
 
 def leakyrelu(x):
     return relu(x, alpha=0.01)
@@ -44,8 +40,8 @@ def preprocess():
     y_train = norm.fit_transform(y_train)
 
     # for later use
-    # X_test = norm.fit_transform(X_test)
-    # y_test = norm.fit_transform(y_test)
+    X_test = norm.fit_transform(X_test)
+    y_test = norm.fit_transform(y_test)
 
     # Split for kfold validation
     mses = list()
@@ -67,24 +63,36 @@ def preprocess():
         # Sequential model start
         model = Sequential()
         # Layers :
-        # 1. Input with neurons: 10, 397 or 794 (input_dim)
-        model.add(Conv1D(64, kernel_size=10, strides=1, input_shape=(784, 1), activation=leakyrelu))  # First Hidden layer
+
+        # 1. First Convolutional Layer
+        model.add(Conv1D(64, kernel_size=10, strides=1, input_shape=(784, 1), activation=leakyrelu))
         # dropout layer
         model.add(Dropout(0.25))
         # pooling layer
-        model.add(AveragePooling1D(pool_size=2))
+        model.add(MaxPooling1D(pool_size=2))
 
         # 2. Second Convolutional layer
-        # model.add(Conv1D(32, kernel_size=3, strides=1, activation=leakyrelu))
-        # pooling layer
-        # model.add(MaxPooling2D(pool_size=(2, 2)))
+        # model.add(Conv1D(64, kernel_size=3, strides=1, activation=leakyrelu))
+        # # dropout layer
         # model.add(Dropout(0.25))
+        # # pooling layer
+        # model.add(MaxPooling1D(pool_size=2))
+
+        # 3. Third Convolutional layer
+        # model.add(Conv1D(128, kernel_size=1, strides=1, activation=leakyrelu))
+        # # dropout layer
+        # model.add(Dropout(0.25))
+        # # pooling layer
+        # model.add(MaxPooling1D(pool_size=2))
 
         model.add(Flatten())
         # 3. Output
+        # model.add(Dense(128, activation=leakyrelu))
+        # # dropout layer
+        # model.add(Dropout(0.5))
         model.add(Dense(64, activation=leakyrelu))
         model.add(Dense(10, activation="softmax"))
-
+        model.summary()
         opt = RMSprop(learning_rate=learning_rate)
         callback = EarlyStopping(monitor="categorical_crossentropy", mode="min", min_delta=0.1, patience=5, verbose=1)
         model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy', 'mean_squared_error',
@@ -94,14 +102,12 @@ def preprocess():
                             validation_data=(X_test_new, y_test_new), callbacks=[callback], verbose=1)
 
         loss, accuracy, mse, cross = model.evaluate(X_test_new, y_test_new, verbose=0)
-
         # stores scores
         acc.append(accuracy)
         mses.append(mse)
         cross_ent.append(cross)
         print(f"Number {k} Fold's MSE score is {mse} and Cross entropy score is {cross}")
 
-    model.summary()
     print("MSE is : ", np.mean(mses))
     print("Cross-Entropy is : ", np.mean(cross_ent))
 
