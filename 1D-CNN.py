@@ -107,7 +107,7 @@ def preprocessAndRun():
     y_test = pd.get_dummies(y_test)
 
     # 2. Normalization
-    # Pixel values between 0 and 255, so we will divide by 255.
+    # Pixel values between 0 and 255, so we will use MinMaxScaler to scale it to [0,1].
     norm = MinMaxScaler()
     X_train = norm.fit_transform(X_train)
     y_train = norm.fit_transform(y_train)
