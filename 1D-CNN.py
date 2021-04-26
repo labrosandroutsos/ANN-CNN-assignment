@@ -1,21 +1,94 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from tensorflow.keras.utils import plot_model
-from tensorflow.keras.optimizers import Adam, SGD, RMSprop
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+from tensorflow.keras.optimizers import SGD, RMSprop
+from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from tensorflow.keras.layers import Input, Dense, Dropout, Conv1D, Dropout, MaxPooling1D, AveragePooling1D, Flatten
+from tensorflow.keras.layers import Dense, Conv1D, Dropout, MaxPooling1D, Flatten
 from tensorflow.keras import Sequential
-from tensorflow.keras.activations import relu
-from argparse import ArgumentParser
 
-def leakyrelu(x):
-    return relu(x, alpha=0.01)
+# def leakyrelu(x):
+#     return relu(x, alpha=0.01)
+
+def neural_ce():
+    # Creating the Neural network model
+    learning_rate = 0.001
+    model = Sequential()
+    # Layers :
+
+    # 1. First Convolutional Layer
+    model.add(Conv1D(64, kernel_size=10, strides=1, input_shape=(784, 1), activation='relu'))
+    # dropout layer
+    model.add(Dropout(0.25))
+    # pooling layer
+    model.add(MaxPooling1D(pool_size=2))
+
+    # 2. Second Convolutional layer
+    model.add(Conv1D(64, kernel_size=7, strides=1, activation='relu'))
+    # dropout layer
+    model.add(Dropout(0.25))
+    # pooling layer
+    model.add(MaxPooling1D(pool_size=2))
+
+    # 3. Third Convolutional layer
+    model.add(Conv1D(128, kernel_size=5, strides=1, activation='relu'))
+    # dropout layer
+    model.add(Dropout(0.25))
+    # pooling layer
+    model.add(MaxPooling1D(pool_size=2))
+
+    model.add(Flatten())
+    # 4. Fully Connected layer
+    model.add(Dense(64, activation='relu'))
+    # 5. Output
+    model.add(Dense(10, activation="softmax"))
+    model.summary()
+    opt = SGD(learning_rate=learning_rate)
+    model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    return model
 
 
-def preprocess():
+def neural_mse():
+    # Creating the Neural network model
+    learning_rate = 0.001
+    model = Sequential()
+    # Layers :
+
+    # 1. First Convolutional Layer
+    model.add(Conv1D(64, kernel_size=10, strides=1, input_shape=(784, 1), activation='relu'))
+    # dropout layer
+    model.add(Dropout(0.25))
+    # pooling layer
+    model.add(MaxPooling1D(pool_size=2))
+
+    # 2. Second Convolutional layer
+    model.add(Conv1D(64, kernel_size=7, strides=1, activation='relu'))
+    # dropout layer
+    model.add(Dropout(0.25))
+    # pooling layer
+    model.add(MaxPooling1D(pool_size=2))
+
+    # 3. Third Convolutional layer
+    model.add(Conv1D(128, kernel_size=5, strides=1, activation='relu'))
+    # dropout layer
+    model.add(Dropout(0.25))
+    # pooling layer
+    model.add(MaxPooling1D(pool_size=2))
+
+    model.add(Flatten())
+
+    # 4. Fully Connected layer
+    model.add(Dense(64, activation='relu'))
+    # 5. Output
+    model.add(Dense(10, activation="softmax"))
+    model.summary()
+    opt = SGD(learning_rate=learning_rate)
+    model.compile(optimizer=opt, loss='mean_squared_error', metrics=['accuracy'])
+    return model
+
+
+def preprocessAndRun():
     train = pd.read_csv('mnist_train.csv')
     test = pd.read_csv('mnist_test.csv')
 
@@ -46,7 +119,8 @@ def preprocess():
     # Split for kfold validation
     mses = list()
     cross_ent = list()
-    acc = list()
+    acc1 = list()
+    acc2 = list()
     kf = KFold(n_splits=5, random_state=None, shuffle=False)  # Maybe shuffle. Check later
 
     for k, (train_ind, test_ind) in enumerate(kf.split(X_train, y_train)):
@@ -58,82 +132,81 @@ def preprocess():
         X_train_new = np.reshape(X_train_new,(X_train_new.shape[0], X_train_new.shape[1], 1))
         X_test_new = np.reshape(X_test_new,(X_test_new.shape[0], X_test_new.shape[1], 1))
 
-        # Creating the Neural network model
-        learning_rate = 0.001
-        # Sequential model start
-        model = Sequential()
-        # Layers :
+        X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-        # 1. First Convolutional Layer
-        model.add(Conv1D(64, kernel_size=10, strides=1, input_shape=(784, 1), activation=leakyrelu))
-        # dropout layer
-        model.add(Dropout(0.25))
-        # pooling layer
-        model.add(MaxPooling1D(pool_size=2))
+        # Early stopping for A2 final subquestion.
+        callback = EarlyStopping(monitor="val_accuracy", mode="max", min_delta=0, patience=5, verbose=1)
 
-        # 2. Second Convolutional layer
-        # model.add(Conv1D(64, kernel_size=3, strides=1, activation=leakyrelu))
-        # # dropout layer
-        # model.add(Dropout(0.25))
-        # # pooling layer
-        # model.add(MaxPooling1D(pool_size=2))
+        ce_model = neural_ce()
+        history1 = ce_model.fit(X_train_new, y_train_new, epochs=200, batch_size=32,
+                                validation_data=(X_test_new, y_test_new), verbose=1)
 
-        # 3. Third Convolutional layer
-        # model.add(Conv1D(128, kernel_size=1, strides=1, activation=leakyrelu))
-        # # dropout layer
-        # model.add(Dropout(0.25))
-        # # pooling layer
-        # model.add(MaxPooling1D(pool_size=2))
+        loss1, accuracy1 = ce_model.evaluate(X_test, y_test, verbose=0)
 
-        model.add(Flatten())
-        # 3. Output
-        # model.add(Dense(128, activation=leakyrelu))
-        # # dropout layer
-        # model.add(Dropout(0.5))
-        model.add(Dense(64, activation=leakyrelu))
-        model.add(Dense(10, activation="softmax"))
-        model.summary()
-        opt = RMSprop(learning_rate=learning_rate)
-        callback = EarlyStopping(monitor="categorical_crossentropy", mode="min", min_delta=0.1, patience=5, verbose=1)
-        model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy', 'mean_squared_error',
-                                                                               'categorical_crossentropy'])
+        mse_model = neural_mse()
+        history2 = mse_model.fit(X_train_new, y_train_new, epochs=200, batch_size=32,
+                                 validation_data=(X_test_new, y_test_new), callbacks=[callback], verbose=1)
 
-        history = model.fit(X_train_new, y_train_new, epochs=10, batch_size=256,
-                            validation_data=(X_test_new, y_test_new), callbacks=[callback], verbose=1)
+        loss2, accuracy2 = mse_model.evaluate(X_test, y_test, verbose=0)
 
-        loss, accuracy, mse, cross = model.evaluate(X_test_new, y_test_new, verbose=0)
         # stores scores
-        acc.append(accuracy)
-        mses.append(mse)
-        cross_ent.append(cross)
-        print(f"Number {k} Fold's MSE score is {mse} and Cross entropy score is {cross}")
+        # cross entropy accuracy
+        acc1.append(accuracy1)
+        # mse accuracy
+        acc2.append(accuracy2)
 
-    print("MSE is : ", np.mean(mses))
+        # for cross entropy loss
+        cross_ent.append(loss1)
+        print(f"\nNumber {k} Fold's Cross entropy score is {loss1}")
+
+        # for mse loss
+        mses.append(loss2)
+        print(f"\nNumber {k} Fold's MSE score is {loss2}")
+
+    # print("Accuracy for Cross Entropy loss is : ", np.mean(acc1) * 100)
+    print("Accuracy for MSE loss is : ", np.mean(acc2) * 100)
+
+    # for cross entropy loss
     print("Cross-Entropy is : ", np.mean(cross_ent))
 
-    # Plotting!s
+    # for mse loss
+    print("MSE is : ", np.mean(mses))
+
+    # Plotting!
     plt.figure(0)
-    plt.plot(history.history['accuracy'], label='Accuracy (train)')
-    plt.plot(history.history['val_accuracy'], label='Accuracy (test)')
-    plt.title("Accuracy of the model")
+    plt.subplot(2, 2, 1)
+    plt.plot(history1.history['accuracy'], label='Accuracy (train)')
+    plt.plot(history1.history['val_accuracy'], label='Accuracy (test)')
+    plt.title("Accuracy with Cross Entropy loss")
     plt.ylabel("Accuracy")
     plt.xlabel("Epochs")
     plt.legend()
+
+    plt.subplot(2, 2, 2)
+    plt.plot(history2.history['accuracy'], label='Accuracy (train)')
+    plt.plot(history2.history['val_accuracy'], label='Accuracy (test)')
+    plt.title("Accuracy with MSE loss")
+    plt.ylabel("Accuracy")
+    plt.xlabel("Epochs")
+    plt.legend()
+    plt.tight_layout()
     plt.show()
 
-    # plot the losses
+
+    # plot the cross entropy loss
     plt.figure(1)
     plt.subplot(2, 2, 1)
-    plt.plot(history.history['categorical_crossentropy'], label='Cross entropy (train)')
-    plt.plot(history.history['val_categorical_crossentropy'], label='Cross entropy (test)')
+    plt.plot(history1.history['loss'], label='Cross entropy (train)')
+    plt.plot(history1.history['val_loss'], label='Cross entropy (test)')
     plt.title('Cross Entropy Evaluated')
     plt.xlabel('Epochs')
     plt.ylabel('Error value')
     plt.legend()
 
+    # plot the mse loss
     plt.subplot(2, 2, 2)
-    plt.plot(history.history['mean_squared_error'], label='MSE (train)')
-    plt.plot(history.history['val_mean_squared_error'], label='MSE (test)')
+    plt.plot(history2.history['loss'], label='MSE (train)')
+    plt.plot(history2.history['val_loss'], label='MSE (test)')
 
     plt.title('MSE Evaluated')
     plt.xlabel('Epochs')
@@ -144,6 +217,4 @@ def preprocess():
 
 
 if __name__ == '__main__':
-    # Parsing the command line arguments
-    parser = ArgumentParser(description="CNN")
-    preprocess()
+    preprocessAndRun()
